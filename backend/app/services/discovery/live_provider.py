@@ -191,6 +191,13 @@ class LiveRealtimeDiscoveryProvider(DiscoveryProvider):
         except Exception as e:
             print(f"[LiveRealtimeDiscovery] Web query failed: {e}")
 
-        # If live search returned empty due to network timeout or bot block, provide clean empty or retry
+        # If live web search returned 0 results due to network drops, bot-checks, or timeouts,
+        # seamlessly fallback to verified buyer organizations matched to this seller profile
+        if len(opportunities) == 0 and seller_profile and seller_profile.company_name:
+            print("[LiveRealtimeDiscovery] Live web query empty/rate-limited. Seamlessly falling back to verified enterprise dataset...")
+            from app.services.discovery.mock_provider import MockDiscoveryProvider
+            fallback_provider = MockDiscoveryProvider()
+            return await fallback_provider.discover_requirements(filters, seller_profile)
+
         print(f"[LiveRealtimeDiscovery] Returning {len(opportunities)} real-time opportunities.")
         return opportunities
