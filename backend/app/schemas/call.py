@@ -52,6 +52,7 @@ class CallSession(BaseModel):
     company_name: str
     contact_name: str
     contact_title: str
+    language: str = "English"
     status: str = "In_Progress"  # In_Progress, Completed, Failed, Scheduled
     stage: str = "greeting"  # greeting, need, scope, timeline, closing, completed
     duration_seconds: int = 0
@@ -65,9 +66,11 @@ class StartCallRequest(BaseModel):
     lead_id: str
     voice_tone: Optional[str] = "Consultative & Empathetic"  # Assertive, Consultative, Direct, Friendly
     focus_offering_id: Optional[str] = None
+    language: Optional[str] = "English"
 
 
 class CallDialogueStepRequest(BaseModel):
     call_id: str
     prospect_response: str
     voice_tone: Optional[str] = "Consultative & Empathetic"
+    language: Optional[str] = None

@@ -29,6 +29,16 @@ with engine.connect() as conn:
         conn.commit()
     except Exception:
         pass
+    try:
+        conn.execute(text("ALTER TABLE call_sessions ADD COLUMN language VARCHAR(50) DEFAULT 'English'"))
+        conn.commit()
+    except Exception:
+        pass
+    try:
+        conn.execute(text("ALTER TABLE leads ADD COLUMN preferred_language VARCHAR(50) DEFAULT 'English'"))
+        conn.commit()
+    except Exception:
+        pass
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

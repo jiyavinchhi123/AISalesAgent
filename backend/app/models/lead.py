@@ -26,4 +26,5 @@ class Lead(Base):
     notes = Column(Text, nullable=True)
     contact_name = Column(String(255), nullable=True)
     contact_email = Column(String(255), nullable=True)
+    preferred_language = Column(String(50), default="English")
     created_at = Column(DateTime, default=datetime.utcnow)

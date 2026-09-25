@@ -232,19 +232,20 @@ export const api = {
   getCallSession: (callId: string): Promise<CallSession> =>
     request<CallSession>(`/calling/sessions/${callId}`),
 
-  startCall: (leadId: string, voiceTone?: string): Promise<CallSession> =>
+  startCall: (leadId: string, voiceTone?: string, language?: string): Promise<CallSession> =>
     request<CallSession>('/calling/start', {
       method: 'POST',
-      body: JSON.stringify({ lead_id: leadId, voice_tone: voiceTone }),
+      body: JSON.stringify({ lead_id: leadId, voice_tone: voiceTone, language }),
     }),
 
-  stepCall: (callId: string, prospectResponse: string, voiceTone?: string): Promise<CallSession> =>
+  stepCall: (callId: string, prospectResponse: string, voiceTone?: string, language?: string): Promise<CallSession> =>
     request<CallSession>('/calling/step', {
       method: 'POST',
       body: JSON.stringify({
         call_id: callId,
         prospect_response: prospectResponse,
         voice_tone: voiceTone,
+        language,
       }),
     }),
 

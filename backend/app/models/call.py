@@ -12,6 +12,7 @@ class CallSession(Base):
     lead_id = Column(String(36), nullable=True)
     lead_name = Column(String(255), nullable=True)
     company_name = Column(String(255), nullable=False)
+    language = Column(String(50), default="English")
     duration_seconds = Column(Integer, default=0)
     status = Column(String(50), default="Completed")
     turns = Column(JSON, default=list)

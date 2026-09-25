@@ -195,6 +195,7 @@ export interface Lead {
   matched_offering?: string;
   intent?: IntentScore;
   status: string;
+  preferred_language?: string;
   created_at: string;
   updated_at: string;
   notes?: string;
@@ -250,6 +251,7 @@ export interface CallSession {
   company_name: string;
   contact_name: string;
   contact_title: string;
+  language?: string;
   status: string;
   stage?: string;
   duration_seconds: number;

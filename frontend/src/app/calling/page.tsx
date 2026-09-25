@@ -24,14 +24,101 @@ import {
   Briefcase,
   Database,
   ExternalLink,
+  Globe,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { CallSession, Lead, StructuredBusinessProfile, Opportunity } from '@/lib/types';
 import { Badge } from '@/components/ui/Badge';
 
+export interface LanguageConfig {
+  id: string;
+  name: string;
+  nativeName: string;
+  code: string;
+  flag: string;
+  testPrompt: string;
+  quickPrompts: string[];
+}
+
+export const SUPPORTED_LANGUAGES: LanguageConfig[] = [
+  {
+    id: 'English',
+    name: 'English',
+    nativeName: 'English (Default)',
+    code: 'en-IN',
+    flag: '🇬🇧',
+    testPrompt: "Hello, am I speaking with the right person? I'm calling to understand your requirements and see how we can help.",
+    quickPrompts: [
+      "We need 500 pieces of Modal Silk Sarees",
+      "Delivery by next month",
+      "Our target price is ₹750 per piece",
+      "Can I speak with a human or schedule a meeting?",
+      "I am the store owner and buyer",
+      "Send catalog to info@boutique.com",
+      "Where is your factory located?",
+      "Sorry, I have to go now, bye",
+    ],
+  },
+  {
+    id: 'Hindi',
+    name: 'Hindi',
+    nativeName: 'हिंदी',
+    code: 'hi-IN',
+    flag: '🇮🇳',
+    testPrompt: "नमस्ते, क्या मेरी सही व्यक्ति से बात हो रही है? मैं आपकी व्यावसायिक आवश्यकताओं को समझने के लिए कॉल कर रहा हूँ।",
+    quickPrompts: [
+      "हमें 500 पीस मोडल सिल्क साड़ियों की आवश्यकता है",
+      "अगले महीने तक डिलीवरी चाहिए",
+      "हमारा बजट ₹750 प्रति पीस है",
+      "क्या मैं किसी लाइव प्रतिनिधि से बात कर सकता हूँ?",
+      "मैं स्टोर का मालिक और मुख्य खरीदार हूँ",
+      "कैटलॉग info@boutique.com पर भेजें",
+      "आपकी फैक्ट्री कहाँ स्थित है?",
+      "माफ़ कीजिए, मुझे अभी जाना होगा, अलविदा",
+    ],
+  },
+  {
+    id: 'Gujarati',
+    name: 'Gujarati',
+    nativeName: 'ગુજરાતી',
+    code: 'gu-IN',
+    flag: '🇮🇳',
+    testPrompt: "નમસ્તે, શું મારી યોગ્ય વ્યક્તિ સાથે વાત થઈ રહી છે? હું તમારી જરૂરિયાતો સમજવા માટે કૉલ કરી રહ્યો છું.",
+    quickPrompts: [
+      "અમને 500 પીસ મોડલ સિલ્ક સાડીઓની જરૂર છે",
+      "આવતા મહિના સુધીમાં ડિલિવરી જોઈએ છે",
+      "અમારો ટાર્ગેટ ભાવ ₹750 પ્રતિ પીસ છે",
+      "શું હું પ્રતિનિધિ સાથે વાત કરી શકું?",
+      "હું સ્ટોરનો માલિક અને મુખ્ય ખરીદદાર છું",
+      "કેટલોગ info@boutique.com પર મોકલો",
+      "તમારું કારખાનું ક્યાં આવેલું છે?",
+      "માફ કરજો, મારે જવું પડશે, આવજો",
+    ],
+  },
+  {
+    id: 'Tamil',
+    name: 'Tamil',
+    nativeName: 'தமிழ்',
+    code: 'ta-IN',
+    flag: '🇮🇳',
+    testPrompt: "வணக்கம், நான் சரியான நபரிடம் பேசுகிறேனா? உங்கள் வணிகத் தேவைகளைப் புரிந்து கொள்ள அழைக்கிறேன்.",
+    quickPrompts: [
+      "எங்களுக்கு 500 மொடால் சில்க் சேலைகள் தேவை",
+      "அடுத்த மாதத்திற்குள் டெலிவரி வேண்டும்",
+      "எங்கள் பட்ஜெட் ஒரு துண்டுக்கு ₹750",
+      "நான் நேரடி பிரதிநிதியுடன் பேசலாமா?",
+      "நான் கடையின் உரிமையாளர் மற்றும் வாங்குபவர்",
+      "info@boutique.com க்கு விவரங்களை அனுப்பவும்",
+      "உங்கள் தொழிற்சாலை எங்குள்ளது?",
+      "மன்னிக்கவும், நான் இப்போது செல்ல வேண்டும், வருகிறேன்",
+    ],
+  },
+];
+
 export default function AICallingPage() {
   const [sessions, setSessions] = useState<CallSession[]>([]);
   const [activeSession, setActiveSession] = useState<CallSession | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('English');
   const [prospectInput, setProspectInput] = useState('');
   const [loadingStep, setLoadingStep] = useState(false);
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -42,7 +129,7 @@ export default function AICallingPage() {
   const [syncingCRM, setSyncingCRM] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
 
-  // Audio & Voice State (100% Browser-Native SpeechSynthesis API en-IN)
+  // Audio & Voice State (Multilingual Browser-Native SpeechSynthesis API)
   const [isMuted, setIsMuted] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [speechSupported, setSpeechSupported] = useState(false);
@@ -55,68 +142,62 @@ export default function AICallingPage() {
   const selectedVoiceRef = useRef<SpeechSynthesisVoice | null>(null);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  // Helper to discover and attach the most natural Indian English female voice
-  const resolveIndianVoice = () => {
+  // Helper to discover and attach best matching voice for active language
+  const resolveVoice = (langName: string = selectedLanguage) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     const voices = window.speechSynthesis.getVoices();
     if (!voices || voices.length === 0) return;
 
-    // Filter to find best Indian English natural voice, prioritizing female conversational tone
+    const langConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === langName.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+    const targetCode = langConfig.code.toLowerCase();
+    const langKeyword = langConfig.name.toLowerCase();
+
+    // Score available voices
     const scored = voices.map((v) => {
       let score = 0;
-      const lang = (v.lang || '').replace('_', '-').toLowerCase();
-      const name = (v.name || '').toLowerCase();
+      const vLang = (v.lang || '').replace('_', '-').toLowerCase();
+      const vName = (v.name || '').toLowerCase();
 
-      // Check locale match: en-IN
-      const isIndianLang = lang === 'en-in' || lang.startsWith('en-in');
-      if (isIndianLang) score += 60;
-      else if (name.includes('india') || name.includes('hindi')) score += 35;
+      // Exact locale match (e.g. 'hi-in', 'gu-in', 'ta-in', 'pa-in', 'en-in')
+      if (vLang === targetCode) score += 100;
+      else if (vLang.startsWith(targetCode.split('-')[0])) score += 80;
+      else if (vName.includes(langKeyword)) score += 60;
+      else if (vLang.startsWith('en-in') && targetCode.startsWith('en')) score += 50;
 
-      // Female conversational voice preference: Heera, Neerja, Swara, Kalpana, Veena, Lekha, etc.
+      // Conversational female voice preference
       const isFemale = [
-        'heera',
-        'neerja',
-        'swara',
-        'kalpana',
-        'veena',
-        'lekha',
-        'kavya',
-        'female',
-        'woman',
-        'girl',
-        'zira',
-      ].some((k) => name.includes(k));
+        'heera', 'neerja', 'swara', 'kalpana', 'veena', 'lekha', 'kavya',
+        'female', 'woman', 'girl', 'zira', 'pallavi', 'dhwani'
+      ].some((k) => vName.includes(k));
+      if (isFemale) score += 30;
 
-      if (isFemale) score += 50;
-
-      // Prefer high-fidelity Natural / Online models
-      if (name.includes('natural')) score += 30;
-      if (name.includes('online')) score += 15;
-
-      // Other Indian voices if female not directly detected (Ravi, Prabhat, etc.)
-      const isKnownIndianVoice = ['ravi', 'prabhat', 'rishi'].some((k) => name.includes(k));
-      if (isKnownIndianVoice) score += 20;
+      if (vName.includes('natural')) score += 20;
+      if (vName.includes('online')) score += 10;
 
       return { voice: v, score };
     });
 
-    // Sort by highest score descending
     scored.sort((a, b) => b.score - a.score);
-    const topMatch = scored[0]?.voice;
+    const topMatch = scored[0];
 
-    if (topMatch) {
-      selectedVoiceRef.current = topMatch;
-      setSelectedVoiceName(topMatch.name || 'Indian English (en-IN)');
+    if (topMatch && topMatch.score > 0) {
+      selectedVoiceRef.current = topMatch.voice;
+      setSelectedVoiceName(topMatch.voice.name || `${langConfig.name} Voice`);
+    } else {
+      // Fallback to Indian English or first available system voice without throwing error
+      const fallbackVoice = voices.find((v) => (v.lang || '').toLowerCase().includes('en-in')) || voices[0];
+      selectedVoiceRef.current = fallbackVoice || null;
+      setSelectedVoiceName(fallbackVoice?.name || 'Default System Voice');
     }
   };
 
-  // Check Web Speech API Support on Client & Bind Indian Accent
+  // Check Web Speech API Support on Client & Bind Voice and Recognition
   useEffect(() => {
     if (typeof window !== 'undefined') {
       if ('speechSynthesis' in window) {
         setSpeechSupported(true);
-        resolveIndianVoice();
-        window.speechSynthesis.onvoiceschanged = resolveIndianVoice;
+        resolveVoice(selectedLanguage);
+        window.speechSynthesis.onvoiceschanged = () => resolveVoice(selectedLanguage);
       }
       const SpeechRecognition =
         (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -125,7 +206,8 @@ export default function AICallingPage() {
         const recog = new SpeechRecognition();
         recog.continuous = false;
         recog.interimResults = false;
-        recog.lang = 'en-IN'; // Indian English acoustic language model
+        const currentLangConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === selectedLanguage.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+        recog.lang = currentLangConfig.code;
 
         recog.onresult = (event: any) => {
           const spokenText = event.results[0][0].transcript;
@@ -150,6 +232,16 @@ export default function AICallingPage() {
       }
     };
   }, []);
+
+  // Synchronize SpeechRecognition and TTS voice whenever selectedLanguage or activeSession changes
+  useEffect(() => {
+    const activeLang = activeSession?.language || selectedLanguage;
+    const langConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === activeLang.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = langConfig.code;
+    }
+    resolveVoice(activeLang);
+  }, [selectedLanguage, activeSession?.language]);
 
   const fetchOpportunities = async () => {
     try {
@@ -182,17 +274,16 @@ export default function AICallingPage() {
     }
   }, [activeSession?.turns, showTranscript]);
 
-  const TEST_VOICE_PROMPT =
-    "Hello, am I speaking with the right person? I'm calling to understand your requirements and see how we can help.";
-
-  // Test native voice playback with user test prompt
+  // Test native voice playback with active language test prompt
   const handleTestVoice = () => {
     if (isMuted) setIsMuted(false);
-    speakAITurn(TEST_VOICE_PROMPT);
+    const activeLang = activeSession?.language || selectedLanguage;
+    const langConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === activeLang.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+    speakAITurn(langConfig.testPrompt, activeLang);
   };
 
-  // Browser-native SpeechSynthesis: natural conversational pacing, en-IN voice, rate 1.08, pitch 1.0, zero pause lag
-  const speakAITurn = (text: string) => {
+  // Browser-native SpeechSynthesis: multilingual natural conversational pacing, pitch 1.0, zero pause lag
+  const speakAITurn = (text: string, langName?: string) => {
     if (isMuted || typeof window === 'undefined' || !('speechSynthesis' in window)) return;
 
     // Immediately cancel previous utterance to prevent queuing delays or long pauses
@@ -203,9 +294,10 @@ export default function AICallingPage() {
       window.speechSynthesis.resume();
     }
 
-    if (!selectedVoiceRef.current) {
-      resolveIndianVoice();
-    }
+    const currentLangName = langName || activeSession?.language || selectedLanguage;
+    resolveVoice(currentLangName);
+
+    const langConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === currentLangName.toLowerCase()) || SUPPORTED_LANGUAGES[0];
 
     // Clean text to enforce short, natural conversational pauses and professional delivery
     const cleanText = text
@@ -229,7 +321,7 @@ export default function AICallingPage() {
       // Pauses: short and natural
       utterance.rate = speakingRate;
       utterance.pitch = 1.0;
-      utterance.lang = 'en-IN';
+      utterance.lang = langConfig.code;
 
       if (selectedVoiceRef.current) {
         utterance.voice = selectedVoiceRef.current;
@@ -260,6 +352,9 @@ export default function AICallingPage() {
       setIsListening(false);
     } else {
       try {
+        const activeLang = activeSession?.language || selectedLanguage;
+        const langConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === activeLang.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+        recognitionRef.current.lang = langConfig.code;
         recognitionRef.current.start();
         setIsListening(true);
       } catch (err) {
@@ -268,40 +363,41 @@ export default function AICallingPage() {
     }
   };
 
-  // Start Call on Lead
+  // Start Call on Lead with selected language (English as default)
   const handleStartCall = async (leadId: string) => {
     try {
-      const newSession = await api.startCall(leadId);
+      const newSession = await api.startCall(leadId, undefined, selectedLanguage);
       setSessions((prev) => [newSession, ...prev.filter((s) => s.id !== newSession.id)]);
       setActiveSession(newSession);
 
-      // Speak opening greeting
+      // Speak opening greeting in chosen language
       if (newSession.turns && newSession.turns.length > 0) {
-        speakAITurn(newSession.turns[0].text);
+        speakAITurn(newSession.turns[0].text, newSession.language || selectedLanguage);
       }
     } catch (err) {
       console.error('Failed to start call:', err);
     }
   };
 
-  // Send Prospect Step Response
+  // Send Prospect Step Response with language preservation
   const handleSendResponse = async (customText?: string) => {
     const textToSend = (customText !== undefined ? customText : prospectInput).trim();
     if (!activeSession || !textToSend) return;
 
     setLoadingStep(true);
     try {
-      const updated = await api.stepCall(activeSession.id, textToSend);
+      const currentCallLang = activeSession.language || selectedLanguage;
+      const updated = await api.stepCall(activeSession.id, textToSend, undefined, currentCallLang);
       setActiveSession(updated);
       setSessions((prev) =>
         prev.map((s) => (s.id === updated.id ? updated : s))
       );
       setProspectInput('');
 
-      // Speak latest AI turn
+      // Speak latest AI turn in current call language
       const lastTurn = updated.turns[updated.turns.length - 1];
       if (lastTurn && lastTurn.speaker === 'ai') {
-        speakAITurn(lastTurn.text);
+        speakAITurn(lastTurn.text, updated.language || currentCallLang);
       }
     } catch (err) {
       console.error('Failed step:', err);
@@ -473,11 +569,69 @@ export default function AICallingPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
         {/* Left Column: Lead Launcher & Call Sessions (4 cols) */}
         <div className="lg:col-span-4 space-y-4">
+          {/* Call Language Selector Card (English Default) */}
+          <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs space-y-3">
+            <div className="flex items-center justify-between">
+              <label htmlFor="call-language-select" className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Call Language</span>
+              </label>
+              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                Default: English
+              </span>
+            </div>
+
+            <div className="relative">
+              <select
+                id="call-language-select"
+                value={selectedLanguage}
+                onChange={(e) => setSelectedLanguage(e.target.value)}
+                className="w-full pl-3 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none cursor-pointer"
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.id} value={lang.name}>
+                    {lang.flag} {lang.name} — {lang.nativeName}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            </div>
+
+            {/* Quick 1-Click Language Buttons */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const isSelected = selectedLanguage.toLowerCase() === lang.name.toLowerCase();
+                return (
+                  <button
+                    key={lang.id}
+                    type="button"
+                    onClick={() => setSelectedLanguage(lang.name)}
+                    className={`px-2 py-1 rounded-md text-[11px] font-medium transition-all ${
+                      isSelected
+                        ? 'bg-indigo-600 text-white font-semibold shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200/80 text-slate-600 border border-slate-200/60'
+                    }`}
+                  >
+                    <span>{lang.flag} {lang.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[11px] text-slate-500 leading-tight">
+              Gemini conducts the entire live qualification call in your chosen language.
+            </p>
+          </div>
+
           {/* Quick Launch on Active Pipeline Leads */}
           <div className="bg-white rounded-xl border border-slate-200/90 p-4 shadow-xs">
-            <div className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Launch Outreach to Pipeline Leads</span>
+            <div className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Launch Outreach to Pipeline Leads</span>
+              </div>
+              <span className="text-[10px] text-indigo-600 font-semibold bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100">
+                {selectedLanguage}
+              </span>
             </div>
 
             {leads.length === 0 ? (
@@ -502,7 +656,7 @@ export default function AICallingPage() {
                       className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold flex items-center gap-1.5 shadow-xs shrink-0 transition-all text-xs"
                     >
                       <PhoneCall className="w-3 h-3" />
-                      <span>Call</span>
+                      <span>Call ({selectedLanguage})</span>
                     </button>
                   </div>
                 ))}
@@ -551,8 +705,14 @@ export default function AICallingPage() {
                           </span>
                         )}
                       </div>
-                      <div className="text-slate-500 text-[11px] mt-1">
-                        Contact: {s.contact_name} ({s.contact_title})
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200 flex items-center gap-1">
+                          <Globe className="w-2.5 h-2.5 text-indigo-500" />
+                          <span>{s.language || 'English'}</span>
+                        </span>
+                        <span className="text-slate-500 text-[11px] truncate">
+                          Contact: {s.contact_name}
+                        </span>
                       </div>
                       {s.insights?.need && s.insights.need !== 'Not available' && (
                         <div className="text-indigo-700 font-medium text-[11px] mt-1 truncate">
@@ -584,23 +744,31 @@ export default function AICallingPage() {
                     </span>
                   </div>
 
-                  {/* Connected Status Indicator */}
-                  {activeStatusType === 'in_progress' ? (
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs font-bold">
-                      <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                      <span>● CALL CONNECTED</span>
+                  <div className="flex items-center gap-2">
+                    {/* Call Language Badge */}
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200 text-xs font-bold">
+                      <Globe className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Language: {activeSession.language || selectedLanguage}</span>
                     </div>
-                  ) : activeStatusType === 'ended' ? (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-300 text-xs font-bold">
-                      <PhoneOff className="w-3.5 h-3.5 text-slate-500" />
-                      <span>CALL ENDED</span>
-                    </div>
-                  ) : (
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                      <span>CALL COMPLETED</span>
-                    </div>
-                  )}
+
+                    {/* Connected Status Indicator */}
+                    {activeStatusType === 'in_progress' ? (
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs font-bold">
+                        <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>● CALL CONNECTED</span>
+                      </div>
+                    ) : activeStatusType === 'ended' ? (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 text-slate-700 rounded-full border border-slate-300 text-xs font-bold">
+                        <PhoneOff className="w-3.5 h-3.5 text-slate-500" />
+                        <span>CALL ENDED</span>
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-200 text-xs font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>CALL COMPLETED</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Main Call Subject / Current Turn Banner */}
@@ -741,35 +909,38 @@ export default function AICallingPage() {
                       </button>
                     </div>
 
-                    {/* Quick Qualification Response Chips */}
+                    {/* Quick Qualification Response Chips (Language-Aware) */}
                     <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 mr-1">Quick Prompts:</span>
-                      {[
-                        "We need 500 pieces of Modal Silk Sarees",
-                        "Delivery by next month",
-                        "Our target price is ₹750 per piece",
-                        "Can I speak with a human or schedule a meeting?",
-                        "I am the store owner and buyer",
-                        "Send catalog to info@boutique.com",
-                        "Where is your factory located?",
-                        "Sorry, I have to go now, bye",
-                      ].map((promptText, pIdx) => (
-                        <button
-                          key={pIdx}
-                          type="button"
-                          onClick={() => handleSendResponse(promptText)}
-                          disabled={loadingStep}
-                          className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all ${
-                            promptText.includes("bye")
-                              ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100"
-                              : promptText.includes("human") || promptText.includes("schedule")
-                              ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold"
-                              : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200"
-                          }`}
-                        >
-                          {promptText}
-                        </button>
-                      ))}
+                      <span className="text-[10px] uppercase font-bold text-slate-400 mr-1 flex items-center gap-1">
+                        <Globe className="w-2.5 h-2.5 text-indigo-500" />
+                        <span>Quick Prompts ({activeSession.language || selectedLanguage}):</span>
+                      </span>
+                      {(() => {
+                        const activeLang = activeSession.language || selectedLanguage;
+                        const langConfig = SUPPORTED_LANGUAGES.find((l) => l.name.toLowerCase() === activeLang.toLowerCase()) || SUPPORTED_LANGUAGES[0];
+                        return langConfig.quickPrompts.map((promptText, pIdx) => {
+                          const isBye = promptText.includes("bye") || promptText.includes("अलविदा") || promptText.includes("આવજો") || promptText.includes("வருகிறேன்");
+                          const isHumanOrSchedule = promptText.includes("human") || promptText.includes("schedule") || promptText.includes("प्रतिनिधि") || promptText.includes("પ્રતિનિધિ") || promptText.includes("நேரடி");
+
+                          return (
+                            <button
+                              key={pIdx}
+                              type="button"
+                              onClick={() => handleSendResponse(promptText)}
+                              disabled={loadingStep}
+                              className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all ${
+                                isBye
+                                  ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100"
+                                  : isHumanOrSchedule
+                                  ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold"
+                                  : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200"
+                              }`}
+                            >
+                              {promptText}
+                            </button>
+                          );
+                        });
+                      })()}
                     </div>
 
                     {/* LIVE CHAT CONVERSATION DIRECTLY AFTER QUICK PROMPTS DURING CALL */}

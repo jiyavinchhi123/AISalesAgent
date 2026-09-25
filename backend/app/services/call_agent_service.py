@@ -25,6 +25,31 @@ from app.schemas.business import StructuredBusinessProfile
 from app.services.business_service import business_service
 from app.services.lead_service import lead_service
 
+# Extensible registry of supported call languages
+SUPPORTED_LANGUAGES = {
+    "English": {
+        "code": "en-IN",
+        "native_name": "English",
+        "instruction": "Respond in natural, professional spoken English suitable for phone conversations."
+    },
+    "Hindi": {
+        "code": "hi-IN",
+        "native_name": "हिंदी",
+        "instruction": "Respond in natural, polite spoken Hindi using Devanagari script (1-2 sentences). Maintain a professional B2B tone."
+    },
+    "Gujarati": {
+        "code": "gu-IN",
+        "native_name": "ગુજરાતી",
+        "instruction": "Respond in natural, polite spoken Gujarati using Gujarati script (1-2 sentences). Maintain a professional B2B tone."
+    },
+    "Tamil": {
+        "code": "ta-IN",
+        "native_name": "தமிழ்",
+        "instruction": "Respond in natural, polite spoken Tamil using Tamil script (1-2 sentences). Maintain a professional B2B tone."
+    },
+}
+DEFAULT_LANGUAGE = "English"
+
 
 class CallAgentService:
     def __init__(self):
@@ -151,7 +176,7 @@ class CallAgentService:
                 }
 
             try:
-                res = client.post(url, json=payload, timeout=6.0)
+                res = client.post(url, json=payload, timeout=10.0)
                 if res.status_code == 200:
                     data = res.json()
                     candidates = data.get("candidates", [])
@@ -234,21 +259,38 @@ class CallAgentService:
             or (seller_products[0] if seller_products else None)
         )
 
-        # 1. Generate opening greeting via Gemini LLM
+        # 1. Resolve call language and generate opening greeting via Gemini LLM
+        target_language = req.language if (req.language and req.language in SUPPORTED_LANGUAGES) else DEFAULT_LANGUAGE
+        lang_info = SUPPORTED_LANGUAGES[target_language]
+
         gemini_key = self._get_gemini_api_key()
         greeting_text = "AI conversation unavailable"
 
         if gemini_key:
-            greeting_prompt = (
-                f"You are the professional B2B AI Sales Representative for {seller_company}.\n"
-                f"Company background: {seller_summary}\n"
-                f"Products offered: {products_str}\n"
-                f"Target lead: {contact_name} at {lead.company_name}.\n"
-                f"Initial signal or interest: {target_service or 'offerings'}.\n\n"
-                f"Generate a natural, professional phone greeting (1 to 2 short sentences). "
-                f"Introduce yourself and {seller_company}, mention their requirement or inquiry, and ask if it's a good time for a brief conversation. "
-                f"Do NOT use quotes, markdown, or asterisks."
-            )
+            if target_language == "English":
+                greeting_prompt = (
+                    f"You are the professional B2B AI Sales Representative for {seller_company}.\n"
+                    f"Company background: {seller_summary}\n"
+                    f"Products offered: {products_str}\n"
+                    f"Target lead: {contact_name} at {lead.company_name}.\n"
+                    f"Initial signal or interest: {target_service or 'offerings'}.\n\n"
+                    f"Generate a natural, professional phone greeting (1 to 2 short sentences). "
+                    f"Introduce yourself and {seller_company}, mention their requirement or inquiry, and ask if it's a good time for a brief conversation. "
+                    f"Do NOT use quotes, markdown, or asterisks."
+                )
+            else:
+                greeting_prompt = (
+                    f"You are the professional B2B AI Sales Representative for {seller_company}.\n"
+                    f"Company background: {seller_summary}\n"
+                    f"Products offered: {products_str}\n"
+                    f"Target lead: {contact_name} at {lead.company_name}.\n"
+                    f"Initial signal or interest: {target_service or 'offerings'}.\n\n"
+                    f"Target Spoken Language: {target_language} ({lang_info['native_name']}).\n"
+                    f"{lang_info['instruction']}\n"
+                    f"Generate a natural, professional phone greeting (1 to 2 short sentences) strictly in {target_language} ({lang_info['native_name']}). "
+                    f"Introduce yourself and {seller_company}, mention their requirement or inquiry, and ask if it's a good time for a brief conversation. "
+                    f"Do NOT use quotes, markdown, or asterisks."
+                )
             llm_greeting = self._call_gemini_api(
                 contents=[{"role": "user", "parts": [{"text": greeting_prompt}]}],
                 temperature=0.3,
@@ -271,6 +313,7 @@ class CallAgentService:
             company_name=lead.company_name,
             contact_name=contact_name,
             contact_title=contact_title,
+            language=target_language,
             status="In_Progress",
             stage="greeting",
             duration_seconds=5,
@@ -309,7 +352,7 @@ class CallAgentService:
             )
         else:
             session.insights = CallInsights(
-                summary=f"Call initiated with {lead.company_name}. Awaiting prospect response.",
+                summary=f"Call initiated with {lead.company_name} in {target_language}. Awaiting prospect response.",
                 sentiment_overall="Neutral",
                 engagement="Awaiting Response",
                 intent_level="In_Progress",
@@ -343,6 +386,7 @@ class CallAgentService:
             lead_id=req.lead_id,
             lead_name=contact_name,
             company_name=lead.company_name,
+            language=target_language,
             duration_seconds=5,
             status="In_Progress",
             turns=[t.model_dump() for t in session.turns],
@@ -354,8 +398,15 @@ class CallAgentService:
         db.add(db_session)
         db.commit()
 
-        # Update lead status in CRM
+        # Update lead status in CRM and record preferred language
         lead_service.update_status(db, user_id, req.lead_id, "Contacted")
+        db_lead = db.query(DBLead).filter(DBLead.id == req.lead_id).first()
+        if db_lead:
+            try:
+                db_lead.preferred_language = target_language
+                db.commit()
+            except Exception:
+                db.rollback()
 
         return session
 
@@ -404,6 +455,11 @@ class CallAgentService:
             or (seller_products[0] if seller_products else "our offerings")
         )
 
+        call_language = getattr(call, "language", None) or DEFAULT_LANGUAGE
+        if call_language not in SUPPORTED_LANGUAGES:
+            call_language = DEFAULT_LANGUAGE
+        lang_info = SUPPORTED_LANGUAGES[call_language]
+
         calendly_info_str = f"Calendly Booking Link: {seller_calendly}" if seller_calendly else "Calendly Booking Link: https://calendly.com/sales-team/meeting"
 
         system_instruction = f"""You are the professional B2B AI Sales Representative for {seller_company}, conducting a live telephone sales conversation with {contact_name} at {lead_company}.
@@ -421,6 +477,17 @@ Company: {lead_company}
 Contact: {contact_name} ({contact_title})
 Initial Lead Signal: {target_service}
 
+=== SPOKEN CALL LANGUAGE DIRECTIVE (MANDATORY) ===
+Target Spoken Language: {call_language} ({lang_info['native_name']})
+{lang_info['instruction']}
+- You MUST write the spoken response in the "reply" JSON field STRICTLY in {call_language} ({lang_info['native_name']}).
+- If Hindi: Respond naturally in fluent Hindi (Devanagari script).
+- If Gujarati: Respond naturally in fluent Gujarati script.
+- If Tamil: Respond naturally in fluent Tamil script.
+- If English: Respond in clear, professional English.
+- The prospect may speak or respond in {call_language}, Romanized/transliterated script, or English. You must comprehend them completely, preserve the exact same qualification logic and conversational flow, and respond strictly in {call_language}.
+- Keep your reply to 1 or 2 concise, conversational sentences suitable for live telephone speech.
+
 === CONVERSATIONAL BRAIN DIRECTIVES ===
 1. FULL CONVERSATION CONTEXT: You must read the complete conversation history below. You are responding naturally to the prospect's latest statement in context of everything said so far.
 2. NO FIXED QUESTION SEQUENCE: There is no rigid script or fixed sequence. You decide dynamically what to ask or say next based on the natural flow of conversation.
@@ -436,7 +503,7 @@ Initial Lead Signal: {target_service}
    - If the prospect asks unexpected questions (e.g. factory location, pricing, certifications, catalog, delivery time, samples), answer concisely in 1 sentence using the Seller Profile and naturally continue the qualification.
    - If the prospect raises objections (budget, timing, competitor), handle them politely and constructively.
 7. SPOKEN PHONE STYLE:
-   - Keep your reply to 1 or 2 concise, conversational sentences suitable for telephone speech.
+   - Keep your reply to 1 or 2 concise, conversational sentences suitable for telephone speech in {call_language} ({lang_info['native_name']}).
    - Do NOT use markdown, bullet points, asterisks, or quotes.
 8. HUMAN TEAM & CALENDLY BOOKING REQUESTS:
    - If the prospect asks to speak with a human, speak with a live representative, or book/schedule a call or demo:
@@ -449,7 +516,7 @@ Initial Lead Signal: {target_service}
 
 You MUST return ONLY a JSON object:
 {{
-  "reply": "Your spoken conversational response (1-2 sentences)",
+  "reply": "Your spoken conversational response strictly in {call_language} ({lang_info['native_name']}) (1-2 sentences)",
   "call_status": "in_progress" | "completed" | "ended",
   "objection_detected": null | "budget" | "timing" | "competitor"
 }}"""
@@ -526,6 +593,9 @@ You MUST return ONLY a JSON object:
         prospect_text = req.prospect_response.strip()
         elapsed = call.duration_seconds + 15
         call.duration_seconds = elapsed
+
+        if req.language and req.language in SUPPORTED_LANGUAGES:
+            call.language = req.language
 
         # 1. Record prospect speech turn
         prospect_turn = CallTurn(
@@ -656,6 +726,7 @@ You MUST return ONLY a JSON object:
         if db_row:
             db_row.duration_seconds = elapsed
             db_row.status = call.status
+            db_row.language = getattr(call, "language", "English")
             db_row.turns = [t.model_dump() for t in call.turns]
             db_row.summary = call.insights.summary if call.insights else ""
             db_row.qualification_verdict = call.insights.qualification_verdict if call.insights else "In_Progress"
@@ -803,6 +874,7 @@ Initial Signal: {matched_offering or 'None'}
    - 61-80: Prospect actively discussed requirements, asked about pricing/terms, or confirmed interest.
    - 81-100: Prospect shared specific volume/timeline, provided direct contact details (email/phone), or requested catalogs/samples/next meetings.
 5. 'qualification_verdict' must be one of: 'Interested', 'Evaluating', 'Follow_Up_Needed', 'Disqualified', 'Not_Interested'.
+6. Multilingual Transcript Comprehension: The conversation turns may be conducted in English, Hindi, Gujarati, Tamil, or a mix. Analyze the semantic meaning accurately regardless of language, and provide the structured JSON analysis with summary and verdict.
 
 You MUST return ONLY a JSON object matching this schema:
 {{
@@ -1174,6 +1246,7 @@ You MUST return ONLY a JSON object matching this schema:
             company_name=row.company_name,
             contact_name=row.lead_name or "Prospect Contact",
             contact_title="Decision Maker",
+            language=getattr(row, "language", None) or "English",
             status=raw_status,
             stage="completed" if raw_status == "Completed" else ("ended" if raw_status == "Ended" else "in_progress"),
             duration_seconds=row.duration_seconds or 30,
