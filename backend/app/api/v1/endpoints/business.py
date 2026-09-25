@@ -64,6 +64,7 @@ async def analyze_business(
     ideal_customer_profile: Optional[str] = Form(""),
     sender_email: Optional[str] = Form(""),
     sender_name: Optional[str] = Form(""),
+    calendly_url: Optional[str] = Form(""),
     files: Optional[List[UploadFile]] = File(None),
     current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
@@ -94,6 +95,7 @@ async def analyze_business(
         ideal_customer_profile=ideal_customer_profile or "",
         sender_email=sender_email or "",
         sender_name=sender_name or "",
+        calendly_url=calendly_url or "",
     )
 
     user_id = _get_user_id(current_user, db)

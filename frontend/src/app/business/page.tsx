@@ -28,6 +28,7 @@ import {
   Info,
   ChevronDown,
   ChevronUp,
+  Calendar,
 } from 'lucide-react';
 import { api } from '@/lib/api';
 import { StructuredBusinessProfile } from '@/lib/types';
@@ -159,6 +160,7 @@ export default function BusinessProfilePage() {
   const [companyName, setCompanyName] = useState('');
   const [companyWebsite, setCompanyWebsite] = useState('');
   const [companyEmail, setCompanyEmail] = useState('');
+  const [calendlyUrl, setCalendlyUrl] = useState('');
   const [businessDescription, setBusinessDescription] = useState('');
   const [productsServices, setProductsServices] = useState('');
   const [targetIndustries, setTargetIndustries] = useState('');
@@ -217,6 +219,9 @@ export default function BusinessProfilePage() {
         setCompanyEmail(data.sender_email);
         updateUser({ email: data.sender_email, company_name: data.company_name });
       }
+      if (data?.calendly_url) {
+        setCalendlyUrl(data.calendly_url);
+      }
     });
   }, []);
 
@@ -225,6 +230,7 @@ export default function BusinessProfilePage() {
     setCompanyName('Siyarang Bandhej');
     setCompanyWebsite('https://siyarangbandhej.com');
     setCompanyEmail('sales@siyarangbandhej.com');
+    setCalendlyUrl('https://calendly.com/siyarang-bandhej/wholesale-consultation');
     setBusinessDescription(
       'Heritage artisan manufacturer of authentic Kutch and Jamnagar Bandhani, handcrafted pure Gaji silk sarees, traditional tie-dye dupattas, and bridal lehenga fabrics. Supplying premium ethnic wear retail chains, luxury boutiques, and global export houses.'
     );
@@ -280,6 +286,7 @@ export default function BusinessProfilePage() {
       formData.append('ideal_customer_profile', idealCustomerProfile);
       formData.append('sender_email', companyEmail);
       formData.append('sender_name', companyName);
+      formData.append('calendly_url', calendlyUrl);
 
       uploadedFiles.forEach((file) => {
         formData.append('files', file);
@@ -416,6 +423,26 @@ export default function BusinessProfilePage() {
               />
               <span className="text-[10px] text-slate-400 mt-0.5 block">
                 Any company can enter their email here. AI will send outreach emails to prospective leads from this address.
+              </span>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Calendly Booking URL</span>
+                </span>
+                <span className="text-[10px] text-indigo-600 font-normal normal-case">For in-call human handoffs</span>
+              </label>
+              <input
+                type="url"
+                placeholder="https://calendly.com/your-team/30min"
+                value={calendlyUrl}
+                onChange={(e) => setCalendlyUrl(e.target.value)}
+                className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all font-mono"
+              />
+              <span className="text-[10px] text-slate-400 mt-0.5 block">
+                When a lead asks to speak with a human during AI voice calls, Gemini will share this Calendly link to book a timeslot.
               </span>
             </div>
 
@@ -794,6 +821,23 @@ export default function BusinessProfilePage() {
                         {profile.smtp_password ? '✓ Configured for Direct Live Dispatch' : '⚠️ Google App Password Required'}
                       </span>
                     </div>
+                    <div className="sm:col-span-2 pt-1 border-t border-slate-200/60">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Calendly In-Call Scheduling URL</span>
+                      {profile.calendly_url ? (
+                        <a
+                          href={profile.calendly_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="font-mono text-indigo-600 hover:underline flex items-center gap-1.5 font-semibold text-xs mt-0.5 truncate"
+                        >
+                          <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                          <span className="truncate">{profile.calendly_url}</span>
+                          <ExternalLink className="w-3 h-3 text-slate-400 shrink-0" />
+                        </a>
+                      ) : (
+                        <span className="text-slate-400 italic text-xs">Not configured (Gemini will use default scheduling link)</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -911,6 +955,28 @@ export default function BusinessProfilePage() {
                   }
                   className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"
                 />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Calendly Scheduling Link</span>
+                </label>
+                <input
+                  type="url"
+                  placeholder="https://calendly.com/your-team/30min"
+                  value={editForm.calendly_url || ''}
+                  onChange={(e) =>
+                    setEditForm({
+                      ...editForm,
+                      calendly_url: e.target.value,
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">
+                  Shared dynamically by Gemini AI during calls when leads request to speak with a human.
+                </span>
               </div>
 
               {/* Outbound Email & SMTP Settings */}

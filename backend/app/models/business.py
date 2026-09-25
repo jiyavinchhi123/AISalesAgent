@@ -25,5 +25,6 @@ class CompanyProfile(Base):
     smtp_port = Column(Integer, default=465)
     smtp_username = Column(String(255), nullable=True)
     smtp_password = Column(String(255), nullable=True)
+    calendly_url = Column(String(500), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -60,6 +60,7 @@ class BusinessAnalyzeInput(BaseModel):
     ideal_customer_profile: Optional[str] = ""
     sender_email: Optional[str] = ""
     sender_name: Optional[str] = ""
+    calendly_url: Optional[str] = ""
 
 
 class StructuredBusinessProfile(BaseModel):
@@ -81,4 +82,5 @@ class StructuredBusinessProfile(BaseModel):
     smtp_port: Optional[int] = 465
     smtp_username: Optional[str] = None
     smtp_password: Optional[str] = None
+    calendly_url: Optional[str] = None
     updated_at: str = ""

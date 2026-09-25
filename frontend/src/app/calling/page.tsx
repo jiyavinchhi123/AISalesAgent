@@ -748,6 +748,7 @@ export default function AICallingPage() {
                         "We need 500 pieces of Modal Silk Sarees",
                         "Delivery by next month",
                         "Our target price is ₹750 per piece",
+                        "Can I speak with a human or schedule a meeting?",
                         "I am the store owner and buyer",
                         "Send catalog to info@boutique.com",
                         "Where is your factory located?",
@@ -761,6 +762,8 @@ export default function AICallingPage() {
                           className={`text-[11px] px-2.5 py-1 rounded-lg border font-medium transition-all ${
                             promptText.includes("bye")
                               ? "bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100"
+                              : promptText.includes("human") || promptText.includes("schedule")
+                              ? "bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 font-semibold"
                               : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200"
                           }`}
                         >
@@ -795,6 +798,13 @@ export default function AICallingPage() {
                         >
                           {activeSession.turns.map((t, index) => {
                             const isAI = t.speaker === 'ai';
+                            const hasCalendlyMention =
+                              isAI &&
+                              (t.text.toLowerCase().includes('calendly') ||
+                               t.text.toLowerCase().includes('booking link') ||
+                               t.text.toLowerCase().includes('schedule') ||
+                               t.text.toLowerCase().includes('timeslot'));
+
                             return (
                               <div
                                 key={t.id || index}
@@ -817,7 +827,31 @@ export default function AICallingPage() {
                                       : 'bg-indigo-600 text-white rounded-tr-none shadow-2xs'
                                   }`}
                                 >
-                                  {t.text}
+                                  <div>{t.text}</div>
+
+                                  {/* Interactive Calendly Card if AI shared link */}
+                                  {hasCalendlyMention && (
+                                    <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex items-center justify-between gap-3 bg-indigo-50/70 -mx-1 -mb-1 p-2.5 rounded-xl border border-indigo-100">
+                                      <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
+                                          <Calendar className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <div className="font-bold text-slate-900 text-[11px]">Book Human Team Meeting</div>
+                                          <div className="text-[10px] text-slate-500 truncate">Choose a live timeslot</div>
+                                        </div>
+                                      </div>
+                                      <a
+                                        href={sellerProfile?.calendly_url || 'https://calendly.com/siyarang-bandhej/wholesale-consultation'}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex items-center gap-1 px-3 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[11px] font-bold shadow-2xs shrink-0 transition-all cursor-pointer"
+                                      >
+                                        <span>Open Calendly</span>
+                                        <ExternalLink className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             );

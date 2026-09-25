@@ -57,6 +57,7 @@ export interface BusinessAnalyzeInput {
   target_industries?: string;
   target_locations?: string;
   ideal_customer_profile?: string;
+  calendly_url?: string;
 }
 
 export interface StructuredBusinessProfile {
@@ -78,6 +79,7 @@ export interface StructuredBusinessProfile {
   smtp_port?: number;
   smtp_username?: string;
   smtp_password?: string;
+  calendly_url?: string;
   updated_at?: string;
 }
 

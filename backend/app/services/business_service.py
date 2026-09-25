@@ -53,6 +53,8 @@ class BusinessService:
                 row.smtp_username = profile_data.smtp_username
             if profile_data.smtp_password is not None:
                 row.smtp_password = profile_data.smtp_password
+            if profile_data.calendly_url is not None:
+                row.calendly_url = profile_data.calendly_url
             row.updated_at = now
         else:
             row = CompanyProfile(
@@ -73,6 +75,7 @@ class BusinessService:
                 smtp_port=profile_data.smtp_port or 465,
                 smtp_username=profile_data.smtp_username,
                 smtp_password=profile_data.smtp_password,
+                calendly_url=profile_data.calendly_url,
                 created_at=now,
                 updated_at=now,
             )
@@ -140,6 +143,8 @@ class BusinessService:
             extracted.sender_name = input_data.sender_name
         elif input_data.company_name:
             extracted.sender_name = input_data.company_name
+        if input_data.calendly_url:
+            extracted.calendly_url = input_data.calendly_url
 
         # Save to database
         return self.save_or_update_profile(user_id, extracted, db)
@@ -162,6 +167,7 @@ class BusinessService:
             smtp_port=getattr(row, "smtp_port", 465) or 465,
             smtp_username=getattr(row, "smtp_username", None),
             smtp_password=getattr(row, "smtp_password", None),
+            calendly_url=getattr(row, "calendly_url", None),
             is_demo_mode=False,
             source_files=[],
             updated_at=row.updated_at.isoformat() if row.updated_at else "",

@@ -390,6 +390,7 @@ class CallAgentService:
         seller_products = [p.strip() for p in (seller_profile.products_services or []) if p.strip()] if seller_profile else []
         seller_locations = [loc.strip() for loc in (seller_profile.target_locations or []) if loc.strip()] if seller_profile else []
         seller_website = (seller_profile.company_website.strip() if seller_profile and seller_profile.company_website else "")
+        seller_calendly = (seller_profile.calendly_url.strip() if seller_profile and getattr(seller_profile, "calendly_url", None) and seller_profile.calendly_url else "")
         products_str = ", ".join(seller_products) if seller_products else "our artisan collections and wholesale products"
         locations_str = ", ".join(seller_locations) if seller_locations else "India"
 
@@ -403,6 +404,8 @@ class CallAgentService:
             or (seller_products[0] if seller_products else "our offerings")
         )
 
+        calendly_info_str = f"Calendly Booking Link: {seller_calendly}" if seller_calendly else "Calendly Booking Link: https://calendly.com/sales-team/meeting"
+
         system_instruction = f"""You are the professional B2B AI Sales Representative for {seller_company}, conducting a live telephone sales conversation with {contact_name} at {lead_company}.
 
 === SELLER PROFILE (GROUND TRUTH) ===
@@ -411,6 +414,7 @@ About / Capabilities: {seller_summary}
 Products / Services: {products_str}
 Manufacturing / Office Locations: {locations_str}
 Website: {seller_website}
+{calendly_info_str}
 
 === CURRENT TARGET PROSPECT ===
 Company: {lead_company}
@@ -434,7 +438,11 @@ Initial Lead Signal: {target_service}
 7. SPOKEN PHONE STYLE:
    - Keep your reply to 1 or 2 concise, conversational sentences suitable for telephone speech.
    - Do NOT use markdown, bullet points, asterisks, or quotes.
-8. DECIDE WHEN TO STOP QUALIFYING:
+8. HUMAN TEAM & CALENDLY BOOKING REQUESTS:
+   - If the prospect asks to speak with a human, speak with a live representative, or book/schedule a call or demo:
+   - Warmly share the Calendly link ({seller_calendly or 'https://calendly.com/sales-team/meeting'}) so they can select a preferred timeslot with the human team immediately.
+   - State that you are sharing the direct scheduling link right now.
+9. DECIDE WHEN TO STOP QUALIFYING:
    - When key qualification details (requirement, quantity, timeline, budget, and best email to send quotes/lookbook to) have all been thoroughly discussed and agreed upon, wrap up the call warmly and set "call_status" to "completed".
    - ONLY set "call_status" to "ended" IF the prospect explicitly indicates they want to hang up, must leave, are busy, or say they are not interested (e.g. "have to go", "not interested", "bye", "hanging up").
    - For all regular answers, questions, inquiries, and dialogue progression turns: You MUST set "call_status" to "in_progress".

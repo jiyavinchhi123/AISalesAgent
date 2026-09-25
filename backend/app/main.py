@@ -17,8 +17,18 @@ from app.api.v1.endpoints import auth, business, discovery, leads, analytics
 from app.schemas.discovery import DiscoveredOpportunity, DiscoveryFilters
 from app.services.discovery.engine import discovery_engine
 
+from sqlalchemy import text
+
 # Initialize SQLite database schema
 Base.metadata.create_all(bind=engine)
+
+# Safe SQLite schema evolution for new columns
+with engine.connect() as conn:
+    try:
+        conn.execute(text("ALTER TABLE company_profiles ADD COLUMN calendly_url VARCHAR(500)"))
+        conn.commit()
+    except Exception:
+        pass
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
